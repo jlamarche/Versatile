@@ -216,7 +216,7 @@ public:
 	virtual void Tick(float Delay);
 	
 private:
-	void _ResettingTick(float DeltaSeconds)
+	void _ResettingTick(float DeltaSeconds);
 	void _SmoothFollowTick(float DeltaSeconds);
 };
 

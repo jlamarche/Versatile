@@ -146,52 +146,65 @@ void AVersatileCharacter::OnResetVR()
 void AVersatileCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	Jump();
+	LastMovementTime = FApp::GetCurrentTime();
 }
 
 void AVersatileCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 	StopJumping();
+	LastMovementTime = FApp::GetCurrentTime();
 }
 
 void AVersatileCharacter::TurnAtRate(float Rate)
 {
+	if (Rate == 0.f || Controller == NULL) return;
+	
 	// calculate delta for this frame from the rate information
-	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+	if (!bIsResetting)
+	{
+		
+		AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
+		LastMovementTime = FApp::GetCurrentTime();
+	}
 }
 
 void AVersatileCharacter::LookUpAtRate(float Rate)
 {
-	// calculate delta for this frame from the rate information
+	if (Rate == 0.f || Controller == NULL) return;
+	
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
+	LastMovementTime = FApp::GetCurrentTime();
 }
 
 void AVersatileCharacter::MoveForward(float Value)
 {
-	if ((Controller != NULL) && (Value != 0.0f))
-	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-		AddMovementInput(Direction, Value);
-	}
+	if (Value == 0.f || Controller == NULL) return;
+	
+	// find out which way is forward
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+	
+	// get forward vector
+	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	AddMovementInput(Direction, Value);
+	
+	LastMovementTime = FApp::GetCurrentTime();
 }
 
 void AVersatileCharacter::MoveRight(float Value)
 {
-	if ( (Controller != NULL) && (Value != 0.0f) )
-	{
-		// find out which way is right
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+	if (Value == 0.f || Controller == NULL) return;
 	
-		// get right vector 
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		// add movement in that direction
-		AddMovementInput(Direction, Value);
-	}
+	// find out which way is right
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+	
+	// get right vector
+	const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+	// add movement in that direction
+	AddMovementInput(Direction, Value);
+	
+	LastMovementTime = FApp::GetCurrentTime();
 }
 
 void AVersatileCharacter::HandleYawInput(float turnInput)
@@ -241,7 +254,8 @@ void AVersatileCharacter::UpdateForCameraMode()
 // MARK: - Tick
 void AVersatileCharacter::_ResettingTick(float DeltaSeconds)
 {
-	FRotator meshRotation = Rotation;
+	const FRotator Rotation = Controller->GetControlRotation();
+	FRotator meshRotation = GetMesh()->GetForwardVector().Rotation();
 	meshRotation.Yaw += 90.f;
 	meshRotation.Pitch = Controller->GetControlRotation().Pitch;
 	
@@ -266,10 +280,8 @@ void AVersatileCharacter::_ResettingTick(float DeltaSeconds)
 		float resetSpeed = (IsAutoReset) ? AutoResetSpeed : CameraResetSpeed;
 		AddControllerYawInput(delta * DeltaSeconds * resetSpeed);
 	}
-	
-	return;
-
 }
+
 void AVersatileCharacter::_SmoothFollowTick(float DeltaSeconds)
 {
 	const FRotator Rotation = Controller->GetControlRotation();
@@ -284,6 +296,7 @@ void AVersatileCharacter::_SmoothFollowTick(float DeltaSeconds)
 	if (bIsResetting)
 	{
 		_ResettingTick(DeltaSeconds);
+		return;
 	}
 	
 	const FRotator YawRotation(0, Rotation.Yaw, 0);
