@@ -13,6 +13,7 @@ AVersatileCharacter::AVersatileCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+	SetRootComponent(GetCapsuleComponent());
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
@@ -34,7 +35,7 @@ AVersatileCharacter::AVersatileCharacter()
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->SetupAttachment(GetCapsuleComponent());
 	CameraBoom->bUsePawnControlRotation = true; // Rotate the arm based on the controller
 
 	// Create a follow camera
@@ -55,6 +56,17 @@ AVersatileCharacter::AVersatileCharacter()
 	ArmsMesh->CastShadow = false;
 	ArmsMesh->RelativeRotation = FRotator(1.9f, -19.19f, 5.2f);
 	ArmsMesh->RelativeLocation = FVector(-0.5f, -4.4f, -155.7f);
+	
+	// Create a camera boom (pulls in towards the player if there is a collision)
+	OverShoulderCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("ShoulderCameraBoom"));
+	OverShoulderCameraBoom->SetupAttachment(GetCapsuleComponent());
+	OverShoulderCameraBoom->bUsePawnControlRotation = false; // Fixed Camera
+	OverShoulderCameraBoom->TargetArmLength = 75.0f;
+	
+	// Create a follow camera
+	OverShoulderCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ShoulderCamera"));
+	OverShoulderCamera->SetupAttachment(OverShoulderCameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	OverShoulderCamera->bUsePawnControlRotation = false;
 	
 	USkeletalMeshComponent *Mesh = GetMesh();
 	Mesh->bCastDynamicShadow = true;
@@ -216,7 +228,6 @@ void AVersatileCharacter::HandleYawInput(float turnInput)
 			AddControllerYawInput(turnInput);
 			LastMovementTime = FApp::GetCurrentTime();
 		}
-		
 	}
 }
 
@@ -233,18 +244,33 @@ void AVersatileCharacter::UpdateForCameraMode()
 			GetMesh()->bOwnerNoSee = false;
 			GetMesh()->MarkRenderStateDirty();
 			ArmsMesh->bVisible = false;
+			ArmsMesh->MarkRenderStateDirty();
+			FollowCamera->SetActive(true);
+			FirstPersonCamera->SetActive(false);
+			GetCharacterMovement()->bOrientRotationToMovement = true;
+			OverShoulderCamera->SetActive(false);
 			break;
 		case ECharacterCameraMode::FirstPerson:
 			GetMesh()->bOwnerNoSee = true;
 			GetMesh()->MarkRenderStateDirty();
 			bIsResetting = false;
 			ArmsMesh->bVisible = true;
+			ArmsMesh->MarkRenderStateDirty();
+			FollowCamera->SetActive(false);
+			FirstPersonCamera->SetActive(true);
+			OverShoulderCamera->SetActive(false);
 			break;
+			GetCharacterMovement()->bOrientRotationToMovement = false;
 		case ECharacterCameraMode::ThirdPersonOverShoulder:
 			bIsResetting = false;
-			GetMesh()->bOwnerNoSee = true;
+			GetMesh()->bOwnerNoSee = false;
 			GetMesh()->MarkRenderStateDirty();
 			ArmsMesh->bVisible = false;
+			ArmsMesh->MarkRenderStateDirty();
+			FollowCamera->SetActive(false);
+			FirstPersonCamera->SetActive(false);
+			OverShoulderCamera->SetActive(true);
+			GetCharacterMovement()->bOrientRotationToMovement = false;
 			break;
 		default:
 			break;
