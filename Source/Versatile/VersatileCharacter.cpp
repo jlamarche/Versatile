@@ -57,6 +57,12 @@ AVersatileCharacter::AVersatileCharacter()
 	ArmsMesh->RelativeRotation = FRotator(1.9f, -19.19f, 5.2f);
 	ArmsMesh->RelativeLocation = FVector(-0.5f, -4.4f, -155.7f);
 	
+	BodyMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("CharacterBody1P"));
+	BodyMesh->SetOnlyOwnerSee(true);
+	BodyMesh->SetupAttachment(GetCapsuleComponent());
+	BodyMesh->bCastDynamicShadow = false;
+	BodyMesh->CastShadow = false;
+	
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	OverShoulderCameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("ShoulderCameraBoom"));
 	OverShoulderCameraBoom->SetupAttachment(GetCapsuleComponent());
@@ -241,32 +247,41 @@ void AVersatileCharacter::UpdateForCameraMode()
 			bIsResetting = false;
 			// no break is intentional
 		case ECharacterCameraMode::ThirdPersonSmoothFollow:
+			bUseControllerRotationYaw = false;
 			GetMesh()->bOwnerNoSee = false;
 			GetMesh()->MarkRenderStateDirty();
 			ArmsMesh->bVisible = false;
 			ArmsMesh->MarkRenderStateDirty();
+			BodyMesh->bVisible = false;
+			BodyMesh->MarkRenderStateDirty();
 			FollowCamera->SetActive(true);
 			FirstPersonCamera->SetActive(false);
 			GetCharacterMovement()->bOrientRotationToMovement = true;
 			OverShoulderCamera->SetActive(false);
 			break;
 		case ECharacterCameraMode::FirstPerson:
+			bUseControllerRotationYaw = true;
 			GetMesh()->bOwnerNoSee = true;
 			GetMesh()->MarkRenderStateDirty();
 			bIsResetting = false;
 			ArmsMesh->bVisible = true;
 			ArmsMesh->MarkRenderStateDirty();
+			BodyMesh->bVisible = true;
+			BodyMesh->MarkRenderStateDirty();
 			FollowCamera->SetActive(false);
 			FirstPersonCamera->SetActive(true);
 			OverShoulderCamera->SetActive(false);
 			break;
 			GetCharacterMovement()->bOrientRotationToMovement = false;
 		case ECharacterCameraMode::ThirdPersonOverShoulder:
+			bUseControllerRotationYaw = false;
 			bIsResetting = false;
 			GetMesh()->bOwnerNoSee = false;
 			GetMesh()->MarkRenderStateDirty();
 			ArmsMesh->bVisible = false;
 			ArmsMesh->MarkRenderStateDirty();
+			BodyMesh->bVisible = false;
+			BodyMesh->MarkRenderStateDirty();
 			FollowCamera->SetActive(false);
 			FirstPersonCamera->SetActive(false);
 			OverShoulderCamera->SetActive(true);
@@ -354,6 +369,10 @@ void AVersatileCharacter::Tick(float DeltaSeconds)
 	if (CameraModeEnum == ECharacterCameraMode::ThirdPersonSmoothFollow)
 	{
 		_SmoothFollowTick(DeltaSeconds);
+	}
+	if (CameraModeEnum == ECharacterCameraMode::FirstPerson)
+	{
+
 	}
 	
 }
