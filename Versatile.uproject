@@ -12,5 +12,12 @@
 				"Engine"
 			]
 		}
+	],
+	"Plugins": [
+		{
+			"Name": "InstanceTool",
+			"Enabled": false,
+			"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/0283702886e8467383899c7b791c4b40"
+		}
 	]
 }

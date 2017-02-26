@@ -77,6 +77,7 @@ AVersatileCharacter::AVersatileCharacter()
 	USkeletalMeshComponent *Mesh = GetMesh();
 	Mesh->bCastDynamicShadow = true;
 	Mesh->CastShadow = true;
+	Mesh->bCastHiddenShadow = true;
 	
 	CameraFollowTurnAngleExponent = .25f;
 	CameraFollowTurnRate = .3f;
@@ -130,6 +131,8 @@ void AVersatileCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	
 	// Camera
 	InputComponent->BindAction("ToggleCameraMode", IE_Pressed, this, &AVersatileCharacter::CycleCamera);
+	PlayerInputComponent->BindAction("CameraZoomIn", IE_Pressed, this, &AVersatileCharacter::ZoomCameraIn);
+	PlayerInputComponent->BindAction("CameraZoomOut", IE_Pressed, this, &AVersatileCharacter::ZoomCameraOut);
 }
 
 void AVersatileCharacter::PostInitializeComponents()
@@ -137,6 +140,26 @@ void AVersatileCharacter::PostInitializeComponents()
 	Super::PostInitializeComponents();
 	UpdateForCameraMode();
 }
+
+void AVersatileCharacter::ZoomCameraIn()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, "Zoom Camera In Requested");
+	CameraZoomCurrent-=CameraZoomIncrement;
+	if (CameraZoomCurrent < CameraZoomMinimumDistance)
+		CameraZoomCurrent = CameraZoomMinimumDistance;
+	
+	CameraBoom->TargetArmLength = CameraZoomCurrent;
+}
+void AVersatileCharacter::ZoomCameraOut()
+{
+	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::White, "Zoom Camera Out Requested");
+	CameraZoomCurrent+=CameraZoomIncrement;
+	if (CameraZoomCurrent > CameraZoomMaximumDistance)
+		CameraZoomCurrent = CameraZoomMaximumDistance;
+	
+	CameraBoom->TargetArmLength = CameraZoomCurrent;
+}
+
 
 void AVersatileCharacter::CycleCamera()
 {
@@ -254,10 +277,8 @@ void AVersatileCharacter::UpdateForCameraMode()
 			ArmsMesh->MarkRenderStateDirty();
 			BodyMesh->bVisible = false;
 			BodyMesh->MarkRenderStateDirty();
-			FollowCamera->SetActive(true);
-			FirstPersonCamera->SetActive(false);
 			GetCharacterMovement()->bOrientRotationToMovement = true;
-			OverShoulderCamera->SetActive(false);
+			SetActiveCameraComponent(FollowCamera);
 			break;
 		case ECharacterCameraMode::FirstPerson:
 			bUseControllerRotationYaw = true;
@@ -268,9 +289,7 @@ void AVersatileCharacter::UpdateForCameraMode()
 			ArmsMesh->MarkRenderStateDirty();
 			BodyMesh->bVisible = true;
 			BodyMesh->MarkRenderStateDirty();
-			FollowCamera->SetActive(false);
-			FirstPersonCamera->SetActive(true);
-			OverShoulderCamera->SetActive(false);
+			SetActiveCameraComponent(FirstPersonCamera);
 			break;
 			GetCharacterMovement()->bOrientRotationToMovement = false;
 		case ECharacterCameraMode::ThirdPersonOverShoulder:
@@ -282,14 +301,42 @@ void AVersatileCharacter::UpdateForCameraMode()
 			ArmsMesh->MarkRenderStateDirty();
 			BodyMesh->bVisible = false;
 			BodyMesh->MarkRenderStateDirty();
-			FollowCamera->SetActive(false);
-			FirstPersonCamera->SetActive(false);
-			OverShoulderCamera->SetActive(true);
+			SetActiveCameraComponent(OverShoulderCamera);
 			GetCharacterMovement()->bOrientRotationToMovement = false;
 			break;
 		default:
 			break;
 	}
+	
+	APlayerController* OurPlayerController = UGameplayStatics::GetPlayerController(this, 0);
+	if (OurPlayerController != nullptr)
+	{
+		OurPlayerController->SetViewTargetWithBlend(this, .25f, EViewTargetBlendFunction::VTBlend_EaseIn);
+	}
+}
+
+// MARK: - Camera Animation
+
+void AVersatileCharacter::SetActiveCameraComponent(UCameraComponent *component)
+{
+	FollowCamera->SetActive(false);
+	FirstPersonCamera->SetActive(false);
+	OverShoulderCamera->SetActive(false);
+	component->SetActive(true);
+}
+
+UCameraComponent * AVersatileCharacter::GetActiveCameraComponent()
+{
+	if (OverShoulderCamera->bIsActive)
+	{
+		return OverShoulderCamera;
+	}
+	if (FirstPersonCamera->bIsActive)
+	{
+		return FirstPersonCamera;
+	}
+	
+	return FollowCamera;
 }
 
 // MARK: - Tick

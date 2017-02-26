@@ -85,6 +85,7 @@ class AVersatileCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* OverShoulderCamera;
 	
+	
 public:
 	
 	/** The current camera mode */
@@ -126,6 +127,7 @@ public:
 	/** The speed to use for Auto Resets */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=SmoothFollowCameraReset)
 	float AutoResetSpeed;
+	
 	
 protected:
 	/** Keeps track of whether the camera is currently being reset */
@@ -198,6 +200,17 @@ protected:
 	void CycleCamera();
 	
 	/**
+	 * Zooms the camera in one increment
+	 */
+	void ZoomCameraIn();
+	
+	/**
+	 * Zooms the camera out one increment
+	 */
+	void ZoomCameraOut();
+
+	
+	/**
 	 * Sets the camera mode to a specific value and updates mesh visibility for the new camera mode.
 	 * @param newCameraMode	The new camera mode value
 	 */
@@ -230,5 +243,14 @@ public:
 private:
 	void _ResettingTick(float DeltaSeconds);
 	void _SmoothFollowTick(float DeltaSeconds);
+	
+	
+	UCameraComponent * GetActiveCameraComponent();
+
+public:
+
+	void SetActiveCameraComponent(UCameraComponent *component);
+
+	
 };
 
